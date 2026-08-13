@@ -2,6 +2,13 @@
   const dropzone = document.getElementById("dropzone");
   const fileInput = document.getElementById("file-input");
   const fileName = document.getElementById("file-name");
+  const sizeMode = document.getElementById("size-mode");
+  const blockControls = document.getElementById("block-controls");
+  const gridControls = document.getElementById("grid-controls");
+  const blockSizeInput = document.getElementById("block-size");
+  const blockValue = document.getElementById("block-value");
+  const maxOutputSelect = document.getElementById("max-output");
+  const blockMeta = document.getElementById("block-meta");
   const widthInput = document.getElementById("width-input");
   const heightInput = document.getElementById("height-input");
   const lockRatio = document.getElementById("lock-ratio");
@@ -9,6 +16,10 @@
   const outlineToggle = document.getElementById("outline-toggle");
   const reconnectToggle = document.getElementById("reconnect-toggle");
   const paletteSelect = document.getElementById("palette-select");
+  const colorCountInput = document.getElementById("color-count");
+  const colorCountValue = document.getElementById("color-count-value");
+  const colorCountField = document.getElementById("color-count-field");
+  const ditherToggle = document.getElementById("dither-toggle");
   const paletteStrip = document.getElementById("palette-strip");
   const scaleInput = document.getElementById("scale-input");
   const gridToggle = document.getElementById("grid-toggle");
@@ -38,6 +49,8 @@
   let colorUndoArmed = false;
   let undoStack = [];
   let redoStack = [];
+  let genTimer = null;
+  let autoScaleFromBlock = true;
 
   function setStatus(text) {
     statusText.textContent = text;
@@ -45,18 +58,52 @@
 
   function currentSize() {
     return {
-      width: Pixelate.clampInt(widthInput.value, 1, 256),
-      height: Pixelate.clampInt(heightInput.value, 1, 256),
+      width: Pixelate.clampInt(widthInput.value, 1, 512),
+      height: Pixelate.clampInt(heightInput.value, 1, 512),
       scale: Pixelate.clampInt(scaleInput.value, 1, 64),
     };
+  }
+
+  function isBlockMode() {
+    return sizeMode.value === "block";
+  }
+
+  function currentBlockGrid() {
+    if (!sourceImage) return null;
+    return Pixelate.computeBlockGrid(
+      sourceImage.naturalWidth,
+      sourceImage.naturalHeight,
+      blockSizeInput.value,
+      Number(maxOutputSelect.value)
+    );
+  }
+
+  function updateModeUi() {
+    const block = isBlockMode();
+    blockControls.hidden = !block;
+    gridControls.hidden = block;
+    colorCountField.hidden = paletteSelect.value !== "auto";
+    blockValue.textContent = String(Pixelate.clampInt(blockSizeInput.value, 1, 32));
+    colorCountValue.textContent = String(Pixelate.clampInt(colorCountInput.value, 2, 256));
+    const grid = currentBlockGrid();
+    if (block && grid) {
+      blockMeta.textContent = `约 ${grid.width}×${grid.height} 格 · 块 ${grid.block}px · 最长边 ${grid.workW}×${grid.workH}`;
+    }
+  }
+
+  function scheduleGenerate() {
+    updateModeUi();
+    if (!sourceImage) return;
+    clearTimeout(genTimer);
+    genTimer = setTimeout(generate, 140);
   }
 
   function applyAspectFromWidth() {
     if (!sourceImage || !lockRatio.checked || syncingRatio) return;
     syncingRatio = true;
     const aspect = sourceImage.naturalWidth / sourceImage.naturalHeight;
-    const w = Pixelate.clampInt(widthInput.value, 1, 256);
-    heightInput.value = String(Pixelate.clampInt(Math.round(w / aspect), 1, 256));
+    const w = Pixelate.clampInt(widthInput.value, 1, 512);
+    heightInput.value = String(Pixelate.clampInt(Math.round(w / aspect), 1, 512));
     widthInput.value = String(w);
     syncingRatio = false;
   }
@@ -65,8 +112,8 @@
     if (!sourceImage || !lockRatio.checked || syncingRatio) return;
     syncingRatio = true;
     const aspect = sourceImage.naturalWidth / sourceImage.naturalHeight;
-    const h = Pixelate.clampInt(heightInput.value, 1, 256);
-    widthInput.value = String(Pixelate.clampInt(Math.round(h * aspect), 1, 256));
+    const h = Pixelate.clampInt(heightInput.value, 1, 512);
+    widthInput.value = String(Pixelate.clampInt(Math.round(h * aspect), 1, 512));
     heightInput.value = String(h);
     syncingRatio = false;
   }
@@ -76,7 +123,7 @@
     syncingRatio = true;
     const aspect = sourceImage.naturalWidth / sourceImage.naturalHeight;
     const width = 64;
-    const height = Pixelate.clampInt(Math.round(width / aspect), 1, 256);
+    const height = Pixelate.clampInt(Math.round(width / aspect), 1, 512);
     widthInput.value = String(width);
     heightInput.value = String(height);
     syncingRatio = false;
@@ -308,16 +355,26 @@
     const { width, height, scale } = currentSize();
     widthInput.value = String(width);
     heightInput.value = String(height);
-    scaleInput.value = String(scale);
+    if (isBlockMode() && autoScaleFromBlock) {
+      const block = Pixelate.clampInt(blockSizeInput.value, 1, 32);
+      scaleInput.value = String(Math.max(1, Math.min(16, block)));
+    } else {
+      scaleInput.value = String(scale);
+    }
 
     setStatus("正在生成…");
     result = Pixelate.pixelateImage(sourceImage, {
+      sizeMode: sizeMode.value,
       width,
       height,
+      blockSize: blockSizeInput.value,
+      maxOutput: Number(maxOutputSelect.value),
       palette: paletteSelect.value,
+      colorCount: colorCountInput.value,
       sample: sampleSelect.value,
       outline: outlineToggle.checked,
       reconnect: reconnectToggle.checked,
+      dither: ditherToggle.checked,
     });
     selected = null;
     undoStack = [];
@@ -328,6 +385,7 @@
     exportSmallBtn.disabled = false;
     exportLargeBtn.disabled = false;
     editMeta.textContent = "点右侧格子选中，再改颜色。画笔可拖着涂，填充改整片同色。重新生成会覆盖手改。";
+    updateModeUi();
     setStatus(`已生成 ${result.width}×${result.height} 像素图，可点格子手改`);
   }
 
@@ -415,6 +473,19 @@
     if (file) loadFile(file);
   });
 
+  sizeMode.addEventListener("change", () => {
+    autoScaleFromBlock = isBlockMode();
+    updateModeUi();
+    if (sourceImage) generate();
+  });
+  blockSizeInput.addEventListener("input", () => {
+    autoScaleFromBlock = true;
+    scheduleGenerate();
+  });
+  maxOutputSelect.addEventListener("change", () => {
+    autoScaleFromBlock = true;
+    if (sourceImage) generate();
+  });
   widthInput.addEventListener("change", () => {
     applyAspectFromWidth();
     if (sourceImage) generate();
@@ -437,9 +508,15 @@
     if (sourceImage) generate();
   });
   paletteSelect.addEventListener("change", () => {
+    updateModeUi();
+    if (sourceImage) generate();
+  });
+  colorCountInput.addEventListener("input", scheduleGenerate);
+  ditherToggle.addEventListener("change", () => {
     if (sourceImage) generate();
   });
   scaleInput.addEventListener("change", () => {
+    autoScaleFromBlock = false;
     scaleInput.value = String(Pixelate.clampInt(scaleInput.value, 1, 64));
     renderPreview();
   });
@@ -559,6 +636,7 @@
   });
 
   setTool("eyedropper");
+  updateModeUi();
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("./sw.js").catch(() => {});

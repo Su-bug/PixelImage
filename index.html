@@ -37,21 +37,46 @@
 
         <section class="block">
           <h2>2. 像素尺寸</h2>
-          <div class="row">
-            <label class="field">
-              <span>宽</span>
-              <input type="number" id="width-input" min="1" max="256" value="64" />
+          <label class="field full">
+            <span>模式</span>
+            <select id="size-mode">
+              <option value="block" selected>像素块大小（接近 PixelTool）</option>
+              <option value="grid">指定宽×高（精灵图）</option>
+            </select>
+          </label>
+          <div id="block-controls">
+            <label class="field full slider-field">
+              <span>像素块大小 <strong id="block-value">4</strong></span>
+              <input type="range" id="block-size" min="1" max="32" value="4" />
             </label>
-            <span class="times">×</span>
-            <label class="field">
-              <span>高</span>
-              <input type="number" id="height-input" min="1" max="256" value="64" />
+            <label class="field full">
+              <span>输出最长边</span>
+              <select id="max-output">
+                <option value="200">200 px</option>
+                <option value="400" selected>400 px</option>
+                <option value="800">800 px</option>
+                <option value="0">原图（最大 1024）</option>
+              </select>
+            </label>
+            <p class="hint" id="block-meta">拖动滑块实时预览。块越小越接近原图。</p>
+          </div>
+          <div id="grid-controls" hidden>
+            <div class="row">
+              <label class="field">
+                <span>宽</span>
+                <input type="number" id="width-input" min="1" max="512" value="64" />
+              </label>
+              <span class="times">×</span>
+              <label class="field">
+                <span>高</span>
+                <input type="number" id="height-input" min="1" max="512" value="64" />
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="lock-ratio" checked />
+              <span>锁定原图宽高比</span>
             </label>
           </div>
-          <label class="check">
-            <input type="checkbox" id="lock-ratio" checked />
-            <span>锁定原图宽高比</span>
-          </label>
         </section>
 
         <section class="block">
@@ -59,18 +84,18 @@
           <label class="field full">
             <span>降采样</span>
             <select id="sample-select">
-              <option value="feature" selected>特征保留（对比度 + 轮廓）</option>
+              <option value="average" selected>分块平均（推荐，接近 PixelTool）</option>
+              <option value="feature">特征保留（对比度 + 轮廓）</option>
               <option value="centroid">主色（K-Centroid）</option>
               <option value="median">中值</option>
-              <option value="average">平均池化（旧）</option>
             </select>
           </label>
           <label class="check">
-            <input type="checkbox" id="outline-toggle" checked />
+            <input type="checkbox" id="outline-toggle" />
             <span>降采样前扩张轮廓</span>
           </label>
           <label class="check">
-            <input type="checkbox" id="reconnect-toggle" checked />
+            <input type="checkbox" id="reconnect-toggle" />
             <span>修补断裂轮廓</span>
           </label>
         </section>
@@ -80,22 +105,28 @@
           <label class="field full">
             <span>色盘</span>
             <select id="palette-select">
+              <option value="auto" selected>自动（用下面的颜色数）</option>
               <option value="none">关闭（保留采样色）</option>
-              <option value="auto8">自动 8 色</option>
-              <option value="auto16" selected>自动 16 色</option>
-              <option value="auto32">自动 32 色</option>
               <option value="gameboy">Game Boy（4 色）</option>
               <option value="pico8">Pico-8（16 色）</option>
               <option value="1bit">1-bit 黑白</option>
             </select>
           </label>
+          <label class="field full slider-field" id="color-count-field">
+            <span>最大颜色数 <strong id="color-count-value">64</strong></span>
+            <input type="range" id="color-count" min="2" max="256" value="64" />
+          </label>
+          <label class="check">
+            <input type="checkbox" id="dither-toggle" />
+            <span>抖动（照片渐变更自然）</span>
+          </label>
           <div class="palette-strip" id="palette-strip" aria-hidden="true"></div>
           <label class="field full">
             <span>预览放大倍数</span>
-            <input type="number" id="scale-input" min="1" max="64" value="10" />
+            <input type="number" id="scale-input" min="1" max="64" value="4" />
           </label>
           <label class="check">
-            <input type="checkbox" id="grid-toggle" checked />
+            <input type="checkbox" id="grid-toggle" />
             <span>显示像素格线（仅放大预览 / 放大导出）</span>
           </label>
         </section>

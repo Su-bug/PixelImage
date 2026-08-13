@@ -1,4 +1,4 @@
-const CACHE = "pixel-mosaic-v3";
+const CACHE = "pixel-mosaic-v4";
 const ASSETS = [
   "./",
   "./index.html",

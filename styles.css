@@ -198,6 +198,26 @@ select:focus {
   accent-color: var(--accent);
 }
 
+.slider-field {
+  margin-top: 10px;
+}
+
+.slider-field span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.slider-field strong {
+  color: var(--accent);
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 28px;
+  accent-color: var(--accent);
+}
+
 .palette-strip {
   display: flex;
   flex-wrap: wrap;

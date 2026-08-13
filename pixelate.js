@@ -756,14 +756,6 @@
     return out;
   }
 
-  function resolvePalette(mode, imageData) {
-    if (!mode || mode === "none") return null;
-    if (mode === "auto8") return medianCutPalette(imageData, 8);
-    if (mode === "auto16") return medianCutPalette(imageData, 16);
-    if (mode === "auto32") return medianCutPalette(imageData, 32);
-    return PRESET_PALETTES[mode] ? PRESET_PALETTES[mode].map((c) => c.slice()) : null;
-  }
-
   function uniqueColors(imageData) {
     const seen = new Set();
     const list = [];
@@ -774,31 +766,132 @@
       if (seen.has(key)) continue;
       seen.add(key);
       list.push([d[i], d[i + 1], d[i + 2]]);
-      if (list.length >= 64) break;
+      if (list.length >= 96) break;
     }
     return list;
   }
 
-  function pixelateImage(img, options) {
-    const width = clampInt(options.width, 1, 256);
-    const height = clampInt(options.height, 1, 256);
-    const sample = options.sample || "feature";
-    const useOutline = options.outline !== false;
-    const useReconnect = options.reconnect !== false;
+  function resizeImageData(src, w, h) {
+    const from = imageDataToCanvas(src);
+    const to = document.createElement("canvas");
+    to.width = w;
+    to.height = h;
+    const ctx = to.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(from, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h);
+  }
 
+  function computeBlockGrid(srcW, srcH, blockSize, maxOutput) {
+    const block = clampInt(blockSize, 1, 32);
+    let w = Math.max(1, srcW);
+    let h = Math.max(1, srcH);
+    const cap = maxOutput > 0 ? clampInt(maxOutput, 32, 1024) : 1024;
+    const scale = Math.min(1, cap / Math.max(w, h));
+    w = Math.max(1, Math.round(w * scale));
+    h = Math.max(1, Math.round(h * scale));
+    return {
+      width: Math.max(1, Math.round(w / block)),
+      height: Math.max(1, Math.round(h / block)),
+      workW: w,
+      workH: h,
+      block,
+    };
+  }
+
+  function quantizeDither(imageData, palette) {
+    const w = imageData.width;
+    const h = imageData.height;
+    const out = new ImageData(new Uint8ClampedArray(imageData.data), w, h);
+    const d = out.data;
+    const f = new Float32Array(d.length);
+    for (let i = 0; i < d.length; i++) f[i] = d[i];
+
+    const diffuse = (x, y, er, eg, eb, factor) => {
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+      const j = (y * w + x) * 4;
+      if (f[j + 3] < 8) return;
+      f[j] += er * factor;
+      f[j + 1] += eg * factor;
+      f[j + 2] += eb * factor;
+    };
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (f[i + 3] < 8) continue;
+        const oldR = f[i];
+        const oldG = f[i + 1];
+        const oldB = f[i + 2];
+        const nc = nearestColor([oldR, oldG, oldB], palette);
+        f[i] = nc[0];
+        f[i + 1] = nc[1];
+        f[i + 2] = nc[2];
+        const er = oldR - nc[0];
+        const eg = oldG - nc[1];
+        const eb = oldB - nc[2];
+        diffuse(x + 1, y, er, eg, eb, 7 / 16);
+        diffuse(x - 1, y + 1, er, eg, eb, 3 / 16);
+        diffuse(x, y + 1, er, eg, eb, 5 / 16);
+        diffuse(x + 1, y + 1, er, eg, eb, 1 / 16);
+      }
+    }
+
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = Math.max(0, Math.min(255, Math.round(f[i])));
+      d[i + 1] = Math.max(0, Math.min(255, Math.round(f[i + 1])));
+      d[i + 2] = Math.max(0, Math.min(255, Math.round(f[i + 2])));
+      d[i + 3] = d[i + 3];
+    }
+    return out;
+  }
+
+  function resolvePalette(mode, imageData, colorCount) {
+    if (!mode || mode === "none") return null;
+    if (mode === "auto") return medianCutPalette(imageData, clampInt(colorCount, 2, 256));
+    if (mode === "auto8") return medianCutPalette(imageData, 8);
+    if (mode === "auto16") return medianCutPalette(imageData, 16);
+    if (mode === "auto32") return medianCutPalette(imageData, 32);
+    return PRESET_PALETTES[mode] ? PRESET_PALETTES[mode].map((c) => c.slice()) : null;
+  }
+
+  function pixelateImage(img, options) {
+    const sample = options.sample || "average";
     let src = drawSource(img);
+    let width;
+    let height;
+
+    if (options.sizeMode === "block") {
+      const grid = computeBlockGrid(src.width, src.height, options.blockSize, options.maxOutput);
+      if (grid.workW !== src.width || grid.workH !== src.height) {
+        src = resizeImageData(src, grid.workW, grid.workH);
+      }
+      width = grid.width;
+      height = grid.height;
+    } else {
+      width = clampInt(options.width, 1, 512);
+      height = clampInt(options.height, 1, 512);
+    }
+
+    const cellCount = width * height;
+    const useOutline = options.outline !== false && cellCount <= 96 * 96;
+    const useReconnect = options.reconnect !== false && cellCount <= 128 * 128;
+
     if (useOutline) src = outlineExpand(src, width, height);
 
     let pixels;
-    if (sample === "average") pixels = mosaicAverage(src, width, height);
+    if (sample === "feature") pixels = mosaicFeature(src, width, height);
     else if (sample === "median") pixels = mosaicMedian(src, width, height);
     else if (sample === "centroid") pixels = mosaicKCentroid(src, width, height);
-    else pixels = mosaicFeature(src, width, height);
+    else pixels = mosaicAverage(src, width, height);
 
     if (useReconnect) pixels = reconnectContours(pixels, false);
 
-    const palette = resolvePalette(options.palette, pixels);
-    if (palette) pixels = quantize(pixels, palette);
+    const palette = resolvePalette(options.palette, pixels, options.colorCount);
+    if (palette) {
+      pixels = options.dither ? quantizeDither(pixels, palette) : quantize(pixels, palette);
+    }
     if (useReconnect) pixels = reconnectContours(pixels, !!palette);
 
     return { imageData: pixels, palette: palette || uniqueColors(pixels), width, height };
@@ -854,6 +947,7 @@
   global.Pixelate = {
     PRESET_PALETTES,
     clampInt,
+    computeBlockGrid,
     pixelateImage,
     imageDataToCanvas,
     drawUpscaled,
