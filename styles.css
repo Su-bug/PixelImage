@@ -211,6 +211,53 @@ select:focus {
   height: 16px;
   border: 2px solid #000;
   box-shadow: 1px 1px 0 #fff3;
+  cursor: pointer;
+}
+
+.palette-strip span:hover,
+.palette-strip span.active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tool-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tool-btn {
+  height: 42px;
+  font-size: 9px;
+}
+
+.tool-btn.active {
+  color: #062214;
+  background: var(--accent);
+  box-shadow:
+    inset -3px -3px 0 var(--accent-dim),
+    inset 3px 3px 0 #c8ffe0;
+}
+
+.color-row {
+  align-items: end;
+}
+
+.color-field input[type="color"] {
+  width: 100%;
+  height: 42px;
+  padding: 2px;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 3px solid var(--border);
+  cursor: pointer;
+}
+
+.edit-meta {
+  margin: 10px 0;
+  color: var(--muted);
+  font-size: 18px;
 }
 
 .actions {
@@ -316,8 +363,8 @@ select:focus {
 }
 
 .frame-lg {
-  min-height: 360px;
-  max-height: min(70vh, 720px);
+  min-height: 420px;
+  max-height: min(78vh, 900px);
 }
 
 #source-preview {
@@ -333,6 +380,21 @@ select:focus {
   height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#result-canvas.tool-brush,
+#result-canvas.tool-eraser {
+  cursor: cell;
+}
+
+#result-canvas.tool-eyedropper {
+  cursor: copy;
+}
+
+#result-canvas.tool-fill {
+  cursor: pointer;
 }
 
 #result-canvas[hidden],

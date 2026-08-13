@@ -20,7 +20,7 @@
   <div class="app">
     <header class="header">
       <h1>PIXEL MOSAIC</h1>
-      <p class="subtitle">像素马赛克生成器 · 上传图片 · 指定宽高 · 导出 PNG</p>
+      <p class="subtitle">像素马赛克生成器 · 上传图片 · 点格子改色 · 导出 PNG</p>
     </header>
 
     <main class="layout">
@@ -40,12 +40,12 @@
           <div class="row">
             <label class="field">
               <span>宽</span>
-              <input type="number" id="width-input" min="1" max="256" value="32" />
+              <input type="number" id="width-input" min="1" max="256" value="64" />
             </label>
             <span class="times">×</span>
             <label class="field">
               <span>高</span>
-              <input type="number" id="height-input" min="1" max="256" value="32" />
+              <input type="number" id="height-input" min="1" max="256" value="64" />
             </label>
           </div>
           <label class="check">
@@ -92,12 +92,37 @@
           <div class="palette-strip" id="palette-strip" aria-hidden="true"></div>
           <label class="field full">
             <span>预览放大倍数</span>
-            <input type="number" id="scale-input" min="1" max="64" value="16" />
+            <input type="number" id="scale-input" min="1" max="64" value="10" />
           </label>
           <label class="check">
             <input type="checkbox" id="grid-toggle" checked />
             <span>显示像素格线（仅放大预览 / 放大导出）</span>
           </label>
+        </section>
+
+        <section class="block" id="editor-block">
+          <h2>5. 手动修像素</h2>
+          <div class="tool-row" id="tool-row" role="group" aria-label="编辑工具">
+            <button type="button" class="btn tool-btn active" data-tool="eyedropper" id="tool-eyedrop">滴管</button>
+            <button type="button" class="btn tool-btn" data-tool="brush" id="tool-brush">画笔</button>
+            <button type="button" class="btn tool-btn" data-tool="fill" id="tool-fill">填充</button>
+            <button type="button" class="btn tool-btn" data-tool="eraser" id="tool-eraser">橡皮</button>
+          </div>
+          <div class="row color-row">
+            <label class="field color-field">
+              <span>颜色</span>
+              <input type="color" id="paint-color" value="#7cffb2" />
+            </label>
+            <label class="field">
+              <span>不透明度</span>
+              <input type="number" id="paint-alpha" min="0" max="255" value="255" />
+            </label>
+          </div>
+          <p class="edit-meta" id="edit-meta">点右侧格子选中，再改颜色。画笔可拖着涂，填充改整片同色。重新生成会覆盖手改。</p>
+          <div class="row">
+            <button type="button" class="btn" id="undo-btn" disabled>撤销</button>
+            <button type="button" class="btn" id="redo-btn" disabled>重做</button>
+          </div>
         </section>
 
         <section class="block actions">
