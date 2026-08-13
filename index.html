@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0b12" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="像素马赛克" />
+  <title>像素马赛克生成器</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>PIXEL MOSAIC</h1>
+      <p class="subtitle">像素马赛克生成器 · 上传图片 · 指定宽高 · 导出 PNG</p>
+    </header>
+
+    <main class="layout">
+      <aside class="panel">
+        <section class="block">
+          <h2>1. 上传图片</h2>
+          <label class="dropzone" id="dropzone" for="file-input">
+            <input type="file" id="file-input" accept="image/*" hidden />
+            <span class="dropzone-icon">▣</span>
+            <span class="dropzone-text">点击或拖拽图片到这里</span>
+            <span class="dropzone-hint" id="file-name">支持 PNG / JPG / WEBP / GIF</span>
+          </label>
+        </section>
+
+        <section class="block">
+          <h2>2. 像素尺寸</h2>
+          <div class="row">
+            <label class="field">
+              <span>宽</span>
+              <input type="number" id="width-input" min="1" max="256" value="32" />
+            </label>
+            <span class="times">×</span>
+            <label class="field">
+              <span>高</span>
+              <input type="number" id="height-input" min="1" max="256" value="32" />
+            </label>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="lock-ratio" checked />
+            <span>锁定原图宽高比</span>
+          </label>
+        </section>
+
+        <section class="block">
+          <h2>3. 采样方式</h2>
+          <label class="field full">
+            <span>降采样</span>
+            <select id="sample-select">
+              <option value="feature" selected>特征保留（对比度 + 轮廓）</option>
+              <option value="centroid">主色（K-Centroid）</option>
+              <option value="median">中值</option>
+              <option value="average">平均池化（旧）</option>
+            </select>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="outline-toggle" checked />
+            <span>降采样前扩张轮廓</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="reconnect-toggle" checked />
+            <span>修补断裂轮廓</span>
+          </label>
+        </section>
+
+        <section class="block">
+          <h2>4. 色盘与预览</h2>
+          <label class="field full">
+            <span>色盘</span>
+            <select id="palette-select">
+              <option value="none">关闭（保留采样色）</option>
+              <option value="auto8">自动 8 色</option>
+              <option value="auto16" selected>自动 16 色</option>
+              <option value="auto32">自动 32 色</option>
+              <option value="gameboy">Game Boy（4 色）</option>
+              <option value="pico8">Pico-8（16 色）</option>
+              <option value="1bit">1-bit 黑白</option>
+            </select>
+          </label>
+          <div class="palette-strip" id="palette-strip" aria-hidden="true"></div>
+          <label class="field full">
+            <span>预览放大倍数</span>
+            <input type="number" id="scale-input" min="1" max="64" value="16" />
+          </label>
+          <label class="check">
+            <input type="checkbox" id="grid-toggle" checked />
+            <span>显示像素格线（仅放大预览 / 放大导出）</span>
+          </label>
+        </section>
+
+        <section class="block actions">
+          <button type="button" class="btn btn-primary" id="generate-btn">生成马赛克</button>
+          <button type="button" class="btn" id="export-small-btn" disabled>导出真实像素 PNG</button>
+          <button type="button" class="btn" id="export-large-btn" disabled>导出放大预览 PNG</button>
+          <p class="hint" id="status-text">先上传一张图片</p>
+        </section>
+      </aside>
+
+      <section class="preview-panel">
+        <div class="preview-card">
+          <h2>原图</h2>
+          <div class="frame frame-sm checker">
+            <img id="source-preview" alt="原图预览" hidden />
+            <span class="placeholder" id="source-placeholder">等待上传</span>
+          </div>
+        </div>
+        <div class="preview-card preview-card-main">
+          <div class="preview-head">
+            <h2>像素结果</h2>
+            <span class="meta" id="result-meta">—</span>
+          </div>
+          <div class="frame frame-lg checker" id="result-frame">
+            <canvas id="result-canvas" hidden></canvas>
+            <span class="placeholder" id="result-placeholder">生成后显示在这里</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="pixelate.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
