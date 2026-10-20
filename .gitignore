@@ -1,13 +1,28 @@
+# Build outputs
 dist/
+*.exe
+*.apk
+*.aab
+
+# Generated / synced UI copies (created by scripts/pack.ps1)
 native/windows/ui/
-native/windows/*.exe
 native/windows/*.syso
 native/android/app/src/main/assets/www/
+
+# Android / Gradle
 native/android/app/build/
 native/android/build/
 native/android/.gradle/
 native/android/local.properties
+native/android/.idea/
+*.iml
+
+# Tooling / OS
 node_modules/
 .DS_Store
 Thumbs.db
 *.log
+.vscode/
+.idea/
+*.swp
+*~
